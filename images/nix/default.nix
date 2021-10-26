@@ -7,13 +7,17 @@
 , gnutar
 , gzip
 , iana-etc
+# to build a static nix
+, static ? false
 , nix
 , openssh
 , xz
 , extraContents ? [ ]
+, buildImage ? if static then dockerTools.buildLayeredImage  else dockerTools.buildImageWithNixDb
+, lib
 }:
 let
-  image = dockerTools.buildImageWithNixDb {
+  image = buildImage {
     inherit (nix) name;
 
     contents = [
@@ -45,6 +49,9 @@ let
 
       # need a HOME
       mkdir -vp root
+    ''
+    + lib.optionalString static ''
+      cp "${cacert}/etc/ssl/certs/ca-bundle.crt" ca-bundle.crt
     '';
 
     config = {
@@ -56,7 +63,7 @@ let
         "NIX_PATH=nixpkgs=${./fake_nixpkgs}"
         "PAGER=cat"
         "PATH=/usr/bin:/bin"
-        "SSL_CERT_FILE=${cacert}/etc/ssl/certs/ca-bundle.crt"
+        "SSL_CERT_FILE=${if static then "/ca-bundle.crt" else "${cacert}/etc/ssl/certs/ca-bundle.crt"}"
         "USER=root"
       ];
     };
