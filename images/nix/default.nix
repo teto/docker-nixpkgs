@@ -15,6 +15,7 @@
 , extraContents ? [ ]
 , buildImage ? if static then dockerTools.buildLayeredImage  else dockerTools.buildImageWithNixDb
 , lib
+, pkgsStatic
 }:
 let
   image = buildImage {
@@ -22,10 +23,16 @@ let
 
     contents = [
       ./root
+      # for haskell binaries
+      iana-etc
+    ] ++ (if static then [
+      # pkgsStatic.coreutils
+      # pkgsStatic.bashInteractive
+    ] else [
       coreutils
       # add /bin/sh
-      bashInteractive
       nix
+      bashInteractive
 
       # runtime dependencies of nix
       cacert
@@ -34,10 +41,7 @@ let
       gzip
       openssh
       xz
-
-      # for haskell binaries
-      iana-etc
-    ] ++ extraContents;
+    ]) ++ extraContents;
 
     extraCommands = ''
       # for /usr/bin/env
@@ -49,9 +53,14 @@ let
 
       # need a HOME
       mkdir -vp root
+
+      echo $PWD
     ''
     + lib.optionalString static ''
       cp "${cacert}/etc/ssl/certs/ca-bundle.crt" ca-bundle.crt
+      mkdir bin
+      cp ${pkgsStatic.coreutils}/bin/* bin
+      cp ${pkgsStatic.bashInteractive}/bin/* bin
     '';
 
     config = {
