@@ -15,7 +15,7 @@ else
   image_tag=$channel
 fi
 
-export NIX_PATH=channel:$channel
+export NIX_PATH=nixpkgs=channel:$channel
 
 banner() {
   echo "========================================================"
